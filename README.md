@@ -79,8 +79,10 @@ Pruebas automáticas: `pytest -q` (usan `mongomock`, no requieren MongoDB).
 
 | Integrante | Responsabilidad |
 |---|---|
-| _(completar)_ | _(completar)_ |
-| _(completar)_ | _(completar)_ |
+| Julian Macea Cardona | Código del ETL (`src/`: extracción, transformación, carga y logs), pruebas, notebook de exploración, README y publicación del repositorio |
+| David Lopez Cano | Bases de datos: instalación y configuración de MongoDB, importación y validación de las colecciones `Listings`, `Reviews` y `Calendar`, y apoyo con la base SQLite de salida |
+
+Los commits del repositorio se hicieron desde la cuenta de Julian; el trabajo de David sobre las bases de datos se integró en esos commits.
 
 ## Ejemplo de ejecución
 
