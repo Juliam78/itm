@@ -1,0 +1,19 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+logs/*.txt
+sqlite/*.db
+datos/fuente/*
+datos/salida/*
+!datos/fuente/.gitkeep
+!datos/salida/.gitkeep
+!logs/.gitkeep
+!sqlite/.gitkeep
+
+# Notas internas de trabajo (no hacen parte de la entrega)
+CONTEXTO_CONTINUIDAD_TALLER.md
+RETROALIMENTACION_TALLER.md
+PASO_A_PASO_COMPANERO.md
