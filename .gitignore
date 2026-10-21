@@ -17,3 +17,7 @@ datos/salida/*
 CONTEXTO_CONTINUIDAD_TALLER.md
 RETROALIMENTACION_TALLER.md
 PASO_A_PASO_COMPANERO.md
+
+# .NET (DijkstraApp)
+DijkstraApp/bin/
+DijkstraApp/obj/
