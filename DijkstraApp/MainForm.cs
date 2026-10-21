@@ -116,15 +116,18 @@ public class MainForm : Form
 
         izquierda.Controls.Add(CrearBoton("Ejecutar Dijkstra", (_, _) => EjecutarDijkstra(), negrita: true));
 
-        var navegacion = new FlowLayoutPanel { Width = 200, Height = 35, Margin = new Padding(0) };
+        // Dos columnas iguales para que ambos botones siempre quepan en el ancho del panel.
+        var navegacion = new TableLayoutPanel { Width = 206, Height = 38, ColumnCount = 2, RowCount = 1, Margin = new Padding(0) };
+        navegacion.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        navegacion.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
         _anterior.Text = "◀ Paso";
-        _anterior.Width = 95;
+        _anterior.Dock = DockStyle.Fill;
         _anterior.Click += (_, _) => MoverPaso(-1);
         _siguiente.Text = "Paso ▶";
-        _siguiente.Width = 95;
+        _siguiente.Dock = DockStyle.Fill;
         _siguiente.Click += (_, _) => MoverPaso(+1);
-        navegacion.Controls.Add(_anterior);
-        navegacion.Controls.Add(_siguiente);
+        navegacion.Controls.Add(_anterior, 0, 0);
+        navegacion.Controls.Add(_siguiente, 1, 0);
         izquierda.Controls.Add(navegacion);
         izquierda.Controls.Add(CrearBoton("Ver resultado final", (_, _) => { _indicePaso = -1; MostrarResultado(); }));
 
