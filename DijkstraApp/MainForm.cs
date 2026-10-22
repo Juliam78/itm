@@ -25,19 +25,22 @@ public class MainForm : Form
     private readonly Button _anterior = new();
     private readonly Button _siguiente = new();
     private readonly ListView _tabla = new();
+    private readonly ListView _rutas = new();
+    private List<Ruta> _rutasEncontradas = new();
+    private Ruta? _rutaSeleccionada;   // ruta alternativa elegida en la tabla de comparación
     private readonly TextBox _registro = new();
     private readonly ToolStripStatusLabel _estado = new();
 
     public MainForm()
     {
         Text = "Algoritmo de Dijkstra - Camino más corto en grafos";
-        Size = new Size(1200, 750);
+        Size = new Size(1400, 820);
         MinimumSize = new Size(900, 550);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9f);
 
         ConstruirInterfaz();
-        CargarEjemplo();
+        CargarEjemplo(Ejemplos.Pedido, "Almacén", "Cliente");
     }
 
     // ------------------------------------------------------------------ Interfaz
@@ -111,7 +114,7 @@ public class MainForm : Form
         izquierda.Controls.Add(new Label { Text = "Nodo destino:", AutoSize = true });
         _destino.Width = 200;
         _destino.DropDownStyle = ComboBoxStyle.DropDownList;
-        _destino.SelectedIndexChanged += (_, _) => { MostrarResultado(); };
+        _destino.SelectedIndexChanged += (_, _) => { CalcularRutas(); MostrarResultado(); };
         izquierda.Controls.Add(_destino);
 
         izquierda.Controls.Add(CrearBoton("Ejecutar Dijkstra", (_, _) => EjecutarDijkstra(), negrita: true));
@@ -131,18 +134,20 @@ public class MainForm : Form
         izquierda.Controls.Add(navegacion);
         izquierda.Controls.Add(CrearBoton("Ver resultado final", (_, _) => { _indicePaso = -1; MostrarResultado(); }));
 
-        izquierda.Controls.Add(CrearBoton("Cargar grafo de ejemplo", (_, _) => CargarEjemplo(), margenSuperior: 25));
+        izquierda.Controls.Add(CrearBoton("Ejemplo: pedido (5 rutas)",
+            (_, _) => CargarEjemplo(Ejemplos.Pedido, "Almacén", "Cliente"), margenSuperior: 25));
+        izquierda.Controls.Add(CrearBoton("Ejemplo: grafo clásico", (_, _) => CargarEjemplo(Ejemplos.Clasico, "A", "F")));
         izquierda.Controls.Add(CrearBoton("Limpiar grafo", (_, _) =>
         {
             _grafo.Limpiar();
             GrafoModificado();
         }));
 
-        // Panel derecho: tabla de distancias y registro de pasos.
-        var derecha = new Panel { Dock = DockStyle.Right, Width = 330, Padding = new Padding(8) };
+        // Panel derecho: tabla de distancias, comparación de rutas y registro de pasos.
+        var derecha = new Panel { Dock = DockStyle.Right, Width = 400, Padding = new Padding(8) };
 
         _tabla.Dock = DockStyle.Top;
-        _tabla.Height = 260;
+        _tabla.Height = 200;
         _tabla.View = View.Details;
         _tabla.FullRowSelect = true;
         _tabla.GridLines = true;
@@ -150,6 +155,23 @@ public class MainForm : Form
         _tabla.Columns.Add("Distancia", 80);
         _tabla.Columns.Add("Previo", 60);
         _tabla.Columns.Add("Estado", 100);
+
+        _rutas.Dock = DockStyle.Top;
+        _rutas.Height = 170;
+        _rutas.View = View.Details;
+        _rutas.FullRowSelect = true;
+        _rutas.GridLines = true;
+        _rutas.MultiSelect = false;
+        _rutas.HideSelection = false;
+        _rutas.Columns.Add("#", 30);
+        _rutas.Columns.Add("Costo", 55);
+        _rutas.Columns.Add("vs. mejor", 65);
+        _rutas.Columns.Add("Ruta", 600);
+        _rutas.SelectedIndexChanged += (_, _) =>
+        {
+            _rutaSeleccionada = _rutas.SelectedItems.Count > 0 ? _rutas.SelectedItems[0].Tag as Ruta : null;
+            _lienzo.Invalidate();
+        };
 
         _registro.Dock = DockStyle.Fill;
         _registro.Multiline = true;
@@ -159,6 +181,8 @@ public class MainForm : Form
 
         derecha.Controls.Add(_registro);
         derecha.Controls.Add(new Label { Text = "Registro del algoritmo", Dock = DockStyle.Top, Height = 25, TextAlign = ContentAlignment.BottomLeft });
+        derecha.Controls.Add(_rutas);
+        derecha.Controls.Add(new Label { Text = "Comparación de rutas origen → destino (clic para ver)", Dock = DockStyle.Top, Height = 25, TextAlign = ContentAlignment.BottomLeft });
         derecha.Controls.Add(_tabla);
         derecha.Controls.Add(new Label { Text = "Tabla de distancias", Dock = DockStyle.Top, Height = 20 });
 
@@ -334,7 +358,36 @@ public class MainForm : Form
     {
         _resultado = null;
         _indicePaso = -1;
+        CalcularRutas();
         MostrarResultado();
+    }
+
+    /// <summary>Llena la tabla con todas las rutas simples del origen al destino, de la más rápida a la más lenta.</summary>
+    private void CalcularRutas()
+    {
+        _rutaSeleccionada = null;
+        _rutasEncontradas = new List<Ruta>();
+        if (_resultado != null && _destino.SelectedItem is Nodo destino)
+            _rutasEncontradas = Rutas.TodasLasRutas(_grafo, _resultado.Origen, destino);
+
+        _rutas.BeginUpdate();
+        _rutas.Items.Clear();
+        var mejor = _rutasEncontradas.FirstOrDefault()?.Costo ?? 0;
+        for (var i = 0; i < _rutasEncontradas.Count; i++)
+        {
+            var ruta = _rutasEncontradas[i];
+            var item = new ListViewItem((i + 1).ToString()) { Tag = ruta };
+            item.SubItems.Add(Dijkstra.Formato(ruta.Costo));
+            item.SubItems.Add(i == 0 || ruta.Costo == mejor ? "más rápida" : "+" + Dijkstra.Formato(ruta.Costo - mejor));
+            item.SubItems.Add(ruta.ToString());
+            if (ruta.Costo == mejor)
+            {
+                item.BackColor = Color.Honeydew;
+                item.Font = new Font(_rutas.Font, FontStyle.Bold);
+            }
+            _rutas.Items.Add(item);
+        }
+        _rutas.EndUpdate();
     }
 
     private void EjecutarDijkstra()
@@ -348,6 +401,7 @@ public class MainForm : Form
 
         _resultado = Dijkstra.Ejecutar(_grafo, origen);
         _indicePaso = 0; // empezar mostrando el primer paso
+        CalcularRutas();
         MostrarResultado();
     }
 
@@ -372,8 +426,10 @@ public class MainForm : Form
 
     private bool EsVistaFinal => _resultado != null && (_indicePaso < 0 || _indicePaso == _resultado.Pasos.Count - 1);
 
-    private List<Nodo> CaminoVisible()
+    private IReadOnlyList<Nodo> CaminoVisible()
     {
+        if (_rutaSeleccionada != null)
+            return _rutaSeleccionada.Nodos;
         if (_resultado == null || !EsVistaFinal || _destino.SelectedItem is not Nodo destino)
             return new List<Nodo>();
         return _resultado.CaminoHasta(destino);
@@ -420,6 +476,16 @@ public class MainForm : Form
                     ? $"No existe camino de {_resultado.Origen} a {destino}."
                     : $"Camino más corto {_resultado.Origen} → {destino}:\r\n  {string.Join(" → ", camino)}\r\n" +
                       $"  Costo total: {Dijkstra.Formato(_resultado.Distancias[destino])}");
+
+                // Validación cruzada: la ruta de Dijkstra debe costar lo mismo que la mejor por fuerza bruta.
+                if (camino.Count > 0 && _rutasEncontradas.Count > 0)
+                {
+                    var mejor = _rutasEncontradas[0].Costo;
+                    var coincide = Math.Abs(mejor - _resultado.Distancias[destino]) < 1e-9;
+                    lineas.Add(coincide
+                        ? $"✔ Validado: es la más rápida de {_rutasEncontradas.Count} rutas evaluadas."
+                        : $"✘ No coincide con la mejor ruta evaluada ({Dijkstra.Formato(mejor)}).");
+                }
             }
 
             _registro.Text = string.Join("\r\n", lineas);
@@ -431,30 +497,13 @@ public class MainForm : Form
         _lienzo.Invalidate();
     }
 
-    private void CargarEjemplo()
+    private void CargarEjemplo(Action<Grafo> crear, string origen, string destino)
     {
-        _grafo.Limpiar();
         _dirigido.Checked = false;
-        _grafo.Dirigido = false;
-
-        var a = _grafo.AgregarNodo(new PointF(80, 250));
-        var b = _grafo.AgregarNodo(new PointF(230, 100));
-        var c = _grafo.AgregarNodo(new PointF(230, 400));
-        var d = _grafo.AgregarNodo(new PointF(420, 100));
-        var e = _grafo.AgregarNodo(new PointF(420, 400));
-        var f = _grafo.AgregarNodo(new PointF(570, 250));
-
-        _grafo.AgregarArista(a, b, 4);
-        _grafo.AgregarArista(a, c, 2);
-        _grafo.AgregarArista(b, c, 1);
-        _grafo.AgregarArista(b, d, 5);
-        _grafo.AgregarArista(c, d, 8);
-        _grafo.AgregarArista(c, e, 10);
-        _grafo.AgregarArista(d, e, 2);
-        _grafo.AgregarArista(d, f, 6);
-        _grafo.AgregarArista(e, f, 3);
-
+        crear(_grafo);
         GrafoModificado();
+        _origen.SelectedItem = _grafo.Nodos.FirstOrDefault(n => n.Nombre == origen);
+        _destino.SelectedItem = _grafo.Nodos.FirstOrDefault(n => n.Nombre == destino);
     }
 
     // ------------------------------------------------------------------ Dibujo
@@ -467,6 +516,7 @@ public class MainForm : Form
 
         var paso = PasoVisible;
         var camino = CaminoVisible();
+        var colorCamino = _rutaSeleccionada != null ? Color.RoyalBlue : Color.Crimson;
         var aristasCamino = new HashSet<(Nodo, Nodo)>();
         for (var i = 0; i + 1 < camino.Count; i++)
             aristasCamino.Add((camino[i], camino[i + 1]));
@@ -484,7 +534,7 @@ public class MainForm : Form
                            && (arista.Origen == paso.NodoActual && arista.Destino == paso.VecinoEvaluado
                                || !_grafo.Dirigido && arista.Destino == paso.NodoActual && arista.Origen == paso.VecinoEvaluado);
 
-            var color = enCamino ? Color.Crimson : evaluada ? Color.DarkOrange : enArbol ? Color.SeaGreen : Color.Gray;
+            var color = enCamino ? colorCamino : evaluada ? Color.DarkOrange : enArbol ? Color.SeaGreen : Color.Gray;
             var grosor = enCamino || evaluada ? 4f : enArbol ? 2.5f : 1.5f;
             DibujarArista(g, arista, color, grosor, fuentePeso);
         }
@@ -497,7 +547,7 @@ public class MainForm : Form
                 if (nodo == paso.NodoActual) relleno = Color.Orange;
                 else if (paso.Visitados.Contains(nodo)) relleno = Color.LightGreen;
             }
-            if (camino.Contains(nodo)) relleno = Color.LightCoral;
+            if (camino.Contains(nodo)) relleno = _rutaSeleccionada != null ? Color.LightSteelBlue : Color.LightCoral;
 
             var borde = nodo == _nodoSeleccionado ? Color.Purple
                 : nodo == _origen.SelectedItem as Nodo ? Color.DarkGreen
@@ -509,7 +559,19 @@ public class MainForm : Form
             using (var lapiz = new Pen(borde, nodo == _nodoSeleccionado ? 4f : 2.5f)) g.DrawEllipse(lapiz, rect);
 
             using var formatoCentro = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-            g.DrawString(nodo.Nombre, fuenteNodo, Brushes.Black, rect, formatoCentro);
+            var tamNombre = g.MeasureString(nodo.Nombre, fuenteNodo);
+            if (tamNombre.Width <= Radio * 2 - 4)
+            {
+                g.DrawString(nodo.Nombre, fuenteNodo, Brushes.Black, rect, formatoCentro);
+            }
+            else
+            {
+                // Nombres largos: inicial dentro del círculo y nombre completo debajo.
+                g.DrawString(nodo.Nombre[..1], fuenteNodo, Brushes.Black, rect, formatoCentro);
+                var caja = new RectangleF(nodo.Posicion.X - tamNombre.Width / 2, rect.Bottom + 2, tamNombre.Width, tamNombre.Height);
+                g.FillRectangle(Brushes.White, caja);
+                g.DrawString(nodo.Nombre, fuenteNodo, Brushes.Black, caja.X, caja.Y);
+            }
 
             if (paso != null)
             {
@@ -570,7 +632,8 @@ public class MainForm : Form
             (Color.LightSkyBlue, "Sin visitar"),
             (Color.Orange, "Nodo actual"),
             (Color.LightGreen, "Visitado"),
-            (Color.LightCoral, "Camino más corto")
+            (Color.LightCoral, "Camino más corto (Dijkstra)"),
+            (Color.LightSteelBlue, "Ruta seleccionada en la tabla")
         };
         using var fuente = new Font("Segoe UI", 8.5f);
         var y = 10f;
