@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Programa de consola que valida el algoritmo; corre en Windows, Linux o macOS. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\DijkstraApp\Modelos\*.cs" Link="Modelos\%(Filename)%(Extension)" />
+    <Compile Include="..\DijkstraApp\Algoritmos\*.cs" Link="Algoritmos\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
